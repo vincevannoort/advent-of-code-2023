@@ -1,19 +1,19 @@
 use phf::phf_map;
 
 #[derive(Debug)]
-struct Instruction(char, char);
+struct CalibrationValue(char, char);
 
-impl From<Instruction> for u32 {
-    fn from(item: Instruction) -> Self {
+impl From<CalibrationValue> for u32 {
+    fn from(item: CalibrationValue) -> Self {
         format!("{}{}", item.0, item.1).parse().unwrap()
     }
 }
 pub fn part_one(input: &str) -> Option<u32> {
     let value: u32 = input
         .lines()
-        // create instructions
+        // find numerical digits
         .map(|line| {
-            Instruction(
+            CalibrationValue(
                 // find first
                 line.chars().find(|c| c.is_digit(10)).unwrap(),
                 // find last
@@ -52,17 +52,21 @@ static DIGITS_REVERSED: phf::Map<&'static str, char> = phf_map! {
 };
 
 fn find_digit(line: String, spelled_digits: &phf::Map<&'static str, char>) -> char {
+    // select line part (ex: `twoone` -> `woone` -> `oone`, ...)
     for (location, character) in line.chars().enumerate() {
-        // digit found
+        let line_part: &str = &line[location..];
+
+        // try finding numerical digit (ex: '1', '2', ...)
         if character.is_digit(10) {
             return character.to_string().parse().unwrap();
         }
-        let line_part: &str = &line[location..];
-        for digit in spelled_digits.keys() {
-            // spelled digit found
-            if line_part.starts_with(digit) {
-                return spelled_digits.get(digit).unwrap().to_owned();
-            }
+
+        // try finding spelled digit (ex: 'one', 'two', ...)
+        if let Some(digit) = spelled_digits
+            .keys()
+            .find(|digit| line_part.starts_with(*digit))
+        {
+            return spelled_digits.get(digit).unwrap().to_owned();
         }
     }
     todo!()
@@ -71,11 +75,11 @@ fn find_digit(line: String, spelled_digits: &phf::Map<&'static str, char>) -> ch
 pub fn part_two(input: &str) -> Option<u32> {
     let value: u32 = input
         .lines()
-        // replace
+        // find numerical and/or spelled digits
         .map(|line| {
             let first_digit = find_digit(line.to_string(), &DIGITS);
             let last_digit = find_digit(line.chars().rev().collect(), &DIGITS_REVERSED);
-            Instruction(first_digit, last_digit)
+            CalibrationValue(first_digit, last_digit)
         })
         .map(|instruction| u32::from(instruction))
         .sum();
