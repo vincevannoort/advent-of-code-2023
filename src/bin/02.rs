@@ -1,5 +1,9 @@
 use std::{collections::HashMap, str::FromStr};
 
+const MAX_RED: u32 = 12;
+const MAX_GREEN: u32 = 13;
+const MAX_BLUE: u32 = 14;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum Color {
     Blue,
@@ -36,42 +40,33 @@ impl FromStr for DiceReveal {
     }
 }
 
-fn parse_line_to_dices(dices: &str) -> Vec<DiceReveal> {
-    let dices: String = dices.replace(';', ",").to_owned();
-    dices
-        .split(", ")
-        .map(|d| DiceReveal::from_str(d).unwrap())
-        .collect()
-}
-
 fn parse_line_to_game_and_dices(line: &str) -> (u32, Vec<DiceReveal>) {
     let (game, dices) = line.split_once(": ").unwrap();
     let game = &game[5..].parse::<u32>().unwrap();
 
     // dont care about sets, only about amount
-    let dice_reveals = parse_line_to_dices(dices);
+    let dices: String = dices.replace(';', ",").to_owned();
+    let dice_reveals = dices
+        .split(", ")
+        .map(|dice| DiceReveal::from_str(dice).unwrap())
+        .collect();
+
     (*game, dice_reveals)
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let bag_configuration: HashMap<Color, u32> = {
-        let mut bag_configuration = HashMap::new();
-        bag_configuration.insert(Color::Red, 12);
-        bag_configuration.insert(Color::Green, 13);
-        bag_configuration.insert(Color::Blue, 14);
-        bag_configuration
-    };
-
     let test: u32 = input
         .lines()
         .filter_map(|line| {
             // dont care about sets, only about amount
             let (game, dice_reveals) = parse_line_to_game_and_dices(line);
 
-            let dice_reveal_more_than_max: Option<&DiceReveal> = dice_reveals.iter().find(|d| {
-                let max_amount = bag_configuration.get(&d.color).unwrap();
-                &d.value > max_amount
-            });
+            let dice_reveal_more_than_max: Option<&DiceReveal> =
+                dice_reveals.iter().find(|d| match d.color {
+                    Color::Red => d.value > MAX_RED,
+                    Color::Green => d.value > MAX_GREEN,
+                    Color::Blue => d.value > MAX_BLUE,
+                });
 
             // game is not possible
             if dice_reveal_more_than_max.is_some() {
