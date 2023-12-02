@@ -97,13 +97,13 @@ mod tests {
 
     #[test]
     fn test_part_one() {
-        let result = part_one(&read_file("extra-examples", 1));
-        assert_eq!(result, Some(142));
+        let result = part_one(&read_file("examples", 1));
+        assert_eq!(result, Some(187));
     }
 
     #[test]
     fn test_part_two() {
         let result = part_two(&read_file("examples", 1));
-        assert_eq!(result, Some(23));
+        assert_eq!(result, Some(179));
     }
 }
