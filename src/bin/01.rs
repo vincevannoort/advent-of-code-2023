@@ -15,13 +15,13 @@ pub fn part_one(input: &str) -> Option<u32> {
         .map(|line| {
             CalibrationValue(
                 // find first
-                line.chars().find(|c| c.is_digit(10)).unwrap(),
+                line.chars().find(|c| c.is_ascii_digit()).unwrap(),
                 // find last
-                line.chars().rev().find(|c| c.is_digit(10)).unwrap(),
+                line.chars().rev().find(|c| c.is_ascii_digit()).unwrap(),
             )
         })
         // convert instruction into u32
-        .map(|instruction| u32::from(instruction))
+        .map(u32::from)
         .sum();
 
     Some(value)
@@ -57,7 +57,7 @@ fn find_digit(line: String, spelled_digits: &phf::Map<&'static str, char>) -> ch
         let line_part: &str = &line[location..];
 
         // try finding numerical digit (ex: '1', '2', ...)
-        if character.is_digit(10) {
+        if character.is_ascii_digit() {
             return character.to_string().parse().unwrap();
         }
 
@@ -81,7 +81,7 @@ pub fn part_two(input: &str) -> Option<u32> {
             let last_digit = find_digit(line.chars().rev().collect(), &DIGITS_REVERSED);
             CalibrationValue(first_digit, last_digit)
         })
-        .map(|instruction| u32::from(instruction))
+        .map(u32::from)
         .sum();
 
     Some(value)
@@ -91,17 +91,19 @@ advent_of_code::main!(1);
 
 #[cfg(test)]
 mod tests {
+    use advent_of_code::template::read_file;
+
     use super::*;
 
     #[test]
     fn test_part_one() {
-        let result = part_one(&advent_of_code::template::read_file("extra-examples", 1));
+        let result = part_one(&read_file("extra-examples", 1));
         assert_eq!(result, Some(142));
     }
 
     #[test]
     fn test_part_two() {
-        let result = part_two(&advent_of_code::template::read_file("examples", 1));
+        let result = part_two(&read_file("examples", 1));
         assert_eq!(result, Some(23));
     }
 }
