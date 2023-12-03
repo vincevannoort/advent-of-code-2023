@@ -83,22 +83,20 @@ impl EngineSchematic {
         let re = Regex::new(r"\d+").unwrap();
         // insert all numbers into grid
         for (y, line) in input.lines().enumerate() {
-            for captures in re.captures_iter(line) {
-                for capture in captures.iter().flatten() {
-                    let digit = capture.as_str().parse::<u32>().unwrap();
-                    let x_start_location = capture.start();
-                    for x in x_start_location..capture.end() {
-                        self.numbers.insert(
-                            OffsetLocation { x, y },
-                            Number(
-                                OriginalLocation {
-                                    x: x_start_location,
-                                    y,
-                                },
-                                digit,
-                            ),
-                        );
-                    }
+            for found_number in re.find_iter(line) {
+                let number = found_number.as_str().parse::<u32>().unwrap();
+                let start_location = found_number.start();
+                for x in start_location..found_number.end() {
+                    self.numbers.insert(
+                        OffsetLocation { x, y },
+                        Number(
+                            OriginalLocation {
+                                x: start_location,
+                                y,
+                            },
+                            number,
+                        ),
+                    );
                 }
             }
         }
