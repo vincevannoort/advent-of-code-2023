@@ -161,13 +161,10 @@ pub fn part_two(input: &str) -> Option<u32> {
         // multiply the two numbers
         .map(|gear| {
             let gear_ratio: u32 = gear.1.iter().product();
-            dbg!(gear.1);
-            dbg!(gear_ratio);
             gear_ratio
         })
         .sum();
 
-    dbg!(found_gears);
     // let result = found_numbers.values().sum();
     Some(found_gears)
 }
