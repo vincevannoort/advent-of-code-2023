@@ -48,16 +48,7 @@ impl EngineSchematic {
 
         schematic.insert_grid(input);
         schematic.insert_numbers(input);
-
-        // insert symbols
-        match part {
-            Part::One => {
-                schematic.part_one_insert_symbols();
-            }
-            Part::Two => {
-                schematic.part_two_insert_symbols();
-            }
-        }
+        schematic.insert_symbols(part);
 
         schematic
     }
@@ -71,13 +62,6 @@ impl EngineSchematic {
         }
     }
 
-    /// insert numbers into grid
-    ///
-    /// Match { start: 0, end: 3, string: "467"}
-    /// insert (location), ((start location), number)
-    /// insert (0, 0), ((0, 0), 467)
-    /// insert (1, 0), ((0, 0), 467)
-    /// insert (2, 0), ((0, 0), 467)
     fn insert_numbers(&mut self, input: &str) {
         // find all numbers in line
         let re = Regex::new(r"\d+").unwrap();
@@ -102,29 +86,26 @@ impl EngineSchematic {
         }
     }
 
-    fn part_one_insert_symbols(&mut self) {
+    fn insert_symbols(&mut self, part: Part) {
         for y in 0..self.height {
             for x in 0..self.width {
                 let location = OriginalLocation { x, y };
                 let value = self.grid[&location];
-                match value {
-                    '0'..='9' => {}
-                    '.' => {}
-                    _ => {
-                        self.symbols.insert(location, value);
+                match part {
+                    // part one we insert any symbol that is not a `digit` or `.`
+                    Part::One => match value {
+                        '0'..='9' => {}
+                        '.' => {}
+                        _ => {
+                            self.symbols.insert(location, value);
+                        }
+                    },
+                    // part two we insert only `*` symbols
+                    Part::Two => {
+                        if let '*' = value {
+                            self.symbols.insert(location, value);
+                        }
                     }
-                }
-            }
-        }
-    }
-
-    fn part_two_insert_symbols(&mut self) {
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let location = OriginalLocation { x, y };
-                let value = self.grid[&location];
-                if let '*' = value {
-                    self.symbols.insert(location, value);
                 }
             }
         }
@@ -136,6 +117,7 @@ fn get_search_spaces(location: OriginalLocation) -> Vec<OffsetLocation> {
     let mut search_space = Vec::new();
     for dy in -1..=1 {
         for dx in -1..=1 {
+            // make sure we never go negative
             let x: usize = (location.x as isize + dx).unsigned_abs();
             let y: usize = (location.y as isize + dy).unsigned_abs();
             let search = OffsetLocation { x, y };
@@ -150,9 +132,9 @@ pub fn part_one(input: &str) -> Option<u32> {
 
     let mut found_numbers: HashMap<OriginalLocation, u32> = HashMap::new();
 
-    // search around every symbol
-    for (location, _) in schematic.symbols {
-        for search in get_search_spaces(location) {
+    for (symbol_location, _) in schematic.symbols {
+        // search all spaces around symbol
+        for search in get_search_spaces(symbol_location) {
             // found a number around symbol
             if let Some(Number(location, number)) = schematic.numbers.get(&search) {
                 found_numbers.insert(*location, *number);
@@ -169,27 +151,31 @@ pub fn part_one(input: &str) -> Option<u32> {
 pub fn part_two(input: &str) -> Option<u32> {
     let schematic = EngineSchematic::new(input, Part::Two);
 
-    // search around every symbol
-    let result: u32 = schematic
-        .symbols
-        .into_iter()
-        .flat_map(|(location, _)| {
-            let mut found_numbers: HashMap<OriginalLocation, u32> = HashMap::new();
-            for search in get_search_spaces(location) {
-                // found a number around symbol
-                if let Some(Number(location, number)) = schematic.numbers.get(&search) {
-                    found_numbers.insert(*location, *number);
-                }
-            }
+    let mut result = 0;
 
-            // gear does not have two numbers
-            if found_numbers.len() != 2 {
-                return None;
-            }
+    for (symbol_location, _) in schematic.symbols {
+        // prevent duplicates by using hashmap
+        let mut found_numbers: HashMap<OriginalLocation, u32> = HashMap::new();
 
-            Some(found_numbers.iter().map(|n| n.1).product::<u32>())
-        })
-        .sum();
+        // search all spaces around symbol
+        for search in get_search_spaces(symbol_location) {
+            // found a number around symbol
+            if let Some(Number(original_location, number)) = schematic.numbers.get(&search) {
+                found_numbers.insert(*original_location, *number);
+            }
+        }
+
+        // gear does not have two numbers
+        if found_numbers.len() != 2 {
+            continue;
+        }
+
+        let found_numbers: Vec<u32> = found_numbers.into_values().collect();
+
+        // multiply gears
+        let value = found_numbers.first().unwrap() * found_numbers.last().unwrap();
+        result += value;
+    }
 
     Some(result)
 }
