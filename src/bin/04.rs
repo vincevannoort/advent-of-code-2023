@@ -61,7 +61,8 @@ pub fn part_one(input: &str) -> Option<u32> {
 pub fn part_two(input: &str) -> Option<u32> {
     let cards: u32 = input.lines().count() as u32;
     // initialize card copies where every card has count 1
-    let mut card_copies: HashMap<CardNumber, u32> = HashMap::from_iter((0..cards).map(|c| (c, 1)));
+    // starting from card 1 to the last card
+    let mut card_copies: HashMap<CardNumber, u32> = HashMap::from_iter((1..=cards).map(|c| (c, 1)));
 
     for line in input.lines() {
         let card = ScratchCard::from_str(line).unwrap();
@@ -75,8 +76,7 @@ pub fn part_two(input: &str) -> Option<u32> {
         for number in next_card..(next_card + matching_numbers_count) {
             card_copies
                 .entry(number)
-                .and_modify(|c: &mut u32| *c += current_card_copies)
-                .or_insert(current_card_copies);
+                .and_modify(|c: &mut u32| *c += current_card_copies);
         }
     }
 
