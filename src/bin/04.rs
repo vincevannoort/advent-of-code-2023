@@ -59,15 +59,16 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let mut card_copies: HashMap<CardNumber, u32> = HashMap::new();
     let cards: u32 = input.lines().count() as u32;
+    // initialize card copies where every card has count 1
+    let mut card_copies: HashMap<CardNumber, u32> = HashMap::from_iter((0..cards).map(|c| (c, 1)));
 
     for line in input.lines() {
         let card = ScratchCard::from_str(line).unwrap();
         let matching_numbers_count = card.get_matching_number_count();
 
-        // get current card copies, if we don't have any stored, it means we have only one card
-        let current_card_copies = card_copies.get(&card.number).cloned().unwrap_or(1);
+        // get current card copies
+        let current_card_copies = card_copies.get(&card.number).cloned().unwrap();
         let next_card = card.number + 1;
 
         // update copies of the next cards
@@ -75,13 +76,11 @@ pub fn part_two(input: &str) -> Option<u32> {
             card_copies
                 .entry(number)
                 .and_modify(|c: &mut u32| *c += current_card_copies)
-                .or_insert(current_card_copies + 1);
+                .or_insert(current_card_copies);
         }
     }
 
-    let card_with_copies = card_copies.values().sum::<u32>();
-    let cards_without_copies = cards - card_copies.len() as u32;
-    Some(card_with_copies + cards_without_copies)
+    Some(card_copies.values().sum::<u32>())
 }
 
 advent_of_code::main!(4);
