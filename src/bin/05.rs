@@ -1,6 +1,6 @@
 use core::panic;
+use rayon::prelude::*;
 use std::{collections::HashMap, ops::Range, str::FromStr};
-
 type Source = u64;
 type Destination = u64;
 type SourceDestinationMapping = HashMap<Range<Source>, Destination>;
@@ -118,7 +118,63 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    None
+    let (seeds, maps) = input.split_once("\n\n").unwrap();
+    let seeds: Vec<u64> = seeds
+        .split_once("seeds: ")
+        .unwrap()
+        .1
+        .split_whitespace()
+        .map(|s| s.parse().unwrap())
+        .collect();
+
+    let seed_ranges: Vec<Range<u64>> = seeds.chunks(2).map(|w| (w[0]..w[0] + w[1])).collect();
+
+    let maps: Vec<_> = maps
+        .split("\n\n")
+        .map(|m| ObjectMapping::from_str(m).unwrap())
+        .collect();
+
+    let mut test = maps.iter().take(7);
+    let seed_to_soil = test.next().unwrap();
+    let soil_to_fertilizer = test.next().unwrap();
+    let fertilizer_to_water = test.next().unwrap();
+    let water_to_light = test.next().unwrap();
+    let light_to_temperature = test.next().unwrap();
+    let temperature_to_humidity = test.next().unwrap();
+    let humidity_to_location = test.next().unwrap();
+
+    let lowest_location = seed_ranges
+        .into_iter()
+        .map(|seed_range| {
+            dbg!(&seed_range);
+            seed_range
+                .clone()
+                .map(|seed| {
+                    if seed % 1000000 == 0 {
+                        dbg!(seed);
+                    }
+                    let location = humidity_to_location.get_destination_by_source(
+                        temperature_to_humidity.get_destination_by_source(
+                            light_to_temperature.get_destination_by_source(
+                                water_to_light.get_destination_by_source(
+                                    fertilizer_to_water.get_destination_by_source(
+                                        soil_to_fertilizer.get_destination_by_source(
+                                            seed_to_soil.get_destination_by_source(seed),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    );
+                    location
+                })
+                .min()
+                .unwrap()
+        })
+        .min()
+        .unwrap();
+
+    Some(lowest_location)
 }
 
 advent_of_code::main!(5);
@@ -136,6 +192,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", 5));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(46));
     }
 }
