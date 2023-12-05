@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rayon::prelude::*;
 use std::{collections::HashMap, ops::Range, str::FromStr};
 type Source = u64;
@@ -6,14 +7,17 @@ type SourceDestinationMapping = HashMap<Range<Source>, Destination>;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 struct Mapping {
-    source: String,
-    destination: String,
     mapping: SourceDestinationMapping,
 }
 
 impl Mapping {
     fn get_destination_by_source(&self, source: u64) -> u64 {
-        if let Some((range, destination)) = self.mapping.iter().find(|(k, _)| k.contains(&source)) {
+        // search through all source ranges, whether source is inside any of them
+        if let Some((range, destination)) = self
+            .mapping
+            .iter()
+            .find(|(source_range, _)| source_range.contains(&source))
+        {
             destination + source - range.start
         } else {
             source
@@ -24,36 +28,25 @@ impl Mapping {
 impl FromStr for Mapping {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (from_to, mapping) = s.split_once(" map:\n").unwrap();
-        let (from, to) = from_to.split_once("-to-").unwrap();
+        let mapping = s.split_once(" map:\n").unwrap().1;
         let mapping: SourceDestinationMapping = HashMap::from_iter(
             mapping
                 .lines()
-                .map(|line| {
-                    let mut range = line.splitn(3, ' ');
-                    (
-                        range.next().unwrap(),
-                        range.next().unwrap(),
-                        range.next().unwrap(),
-                    )
-                })
                 // given mapping `50 98 2`
                 // maps source to destination
                 // 98 -> 50
                 // 99 -> 51
-                .map(|(destination, source, amount)| {
-                    let destination = destination.parse::<u64>().unwrap();
-                    let source = source.parse::<u64>().unwrap();
-                    let amount = amount.parse::<u64>().unwrap();
+                .map(|line| {
+                    let (destination, source, amount) = line
+                        .splitn(3, ' ')
+                        .map(|n| n.parse::<u64>().unwrap())
+                        .collect_tuple()
+                        .unwrap();
                     (source..(source + amount), destination)
                 }),
         );
 
-        Ok(Mapping {
-            source: from.to_string(),
-            destination: to.to_string(),
-            mapping,
-        })
+        Ok(Mapping { mapping })
     }
 }
 
@@ -95,7 +88,7 @@ pub fn part_one(input: &str) -> Option<u64> {
 pub fn part_two(input: &str) -> Option<u64> {
     let (seeds, maps) = input.split_once("\n\n").unwrap();
     let seeds: Vec<u64> = parse_seeds(seeds);
-    let seed_ranges: Vec<Range<u64>> = seeds.chunks(2).map(|w| (w[0]..w[0] + w[1])).collect();
+    let seed_ranges: Vec<Range<u64>> = seeds.chunks_exact(2).map(|w| (w[0]..w[0] + w[1])).collect();
     let mappings: Vec<Mapping> = parse_mappings(maps);
 
     let lowest_location = seed_ranges
