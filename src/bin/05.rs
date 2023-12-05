@@ -50,9 +50,6 @@ impl FromStr for ObjectMapping {
             destination: to.to_string(),
             mapping,
         };
-        // for source in 0..100 {
-        //     let destination = object_mapping.get_destination_by_source(source);
-        // }
 
         Ok(object_mapping)
     }
@@ -144,16 +141,16 @@ pub fn part_two(input: &str) -> Option<u64> {
     let humidity_to_location = test.next().unwrap();
 
     let lowest_location = seed_ranges
-        .into_iter()
+        .par_iter()
         .map(|seed_range| {
-            dbg!(&seed_range);
             seed_range
                 .clone()
                 .map(|seed| {
                     if seed % 1000000 == 0 {
                         dbg!(seed);
                     }
-                    let location = humidity_to_location.get_destination_by_source(
+
+                    humidity_to_location.get_destination_by_source(
                         temperature_to_humidity.get_destination_by_source(
                             light_to_temperature.get_destination_by_source(
                                 water_to_light.get_destination_by_source(
@@ -165,8 +162,7 @@ pub fn part_two(input: &str) -> Option<u64> {
                                 ),
                             ),
                         ),
-                    );
-                    location
+                    )
                 })
                 .min()
                 .unwrap()
