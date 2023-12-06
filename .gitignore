@@ -22,3 +22,6 @@ data/puzzles
 !data/inputs/.keep
 !data/examples/.keep
 !data/puzzles/.keep
+
+# mac :(
+.DS_Store
