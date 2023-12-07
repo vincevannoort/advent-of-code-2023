@@ -1,8 +1,5 @@
 use core::panic;
-use std::{
-    cmp::{Ordering, Reverse},
-    str::FromStr,
-};
+use std::cmp::{Ordering, Reverse};
 
 use counter::Counter;
 use itertools::Itertools;
@@ -22,6 +19,7 @@ enum Card {
     Four,
     Three,
     Two,
+    Joker,
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
@@ -55,26 +53,47 @@ impl Hand {
     }
 }
 
-impl FromStr for Card {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let card = match s {
-            "A" => Card::Ace,
-            "K" => Card::King,
-            "Q" => Card::Queen,
-            "J" => Card::Jack,
-            "T" => Card::Ten,
-            "9" => Card::Nine,
-            "8" => Card::Eight,
-            "7" => Card::Seven,
-            "6" => Card::Six,
-            "5" => Card::Five,
-            "4" => Card::Four,
-            "3" => Card::Three,
-            "2" => Card::Two,
+impl Strenght {
+    fn increase(&self) -> Self {
+        match *self {
+            Strenght::HighCard => Strenght::OnePair,
+            Strenght::OnePair => Strenght::TwoPairs,
+            Strenght::TwoPairs => Strenght::ThreeOfAKind,
+            Strenght::ThreeOfAKind => Strenght::FullHouse,
+            Strenght::FullHouse => Strenght::FourOfAkind,
+            Strenght::FourOfAkind => Strenght::FiveOfAKind,
             _ => panic!(),
-        };
-        Ok(card)
+        }
+    }
+    fn increase_strength_by_jokers(&self, jokers: u32) {}
+}
+
+enum Part {
+    One,
+    Two,
+}
+
+impl Card {
+    fn parse_to_card(s: char, part: Part) -> Card {
+        match s {
+            'A' => Card::Ace,
+            'K' => Card::King,
+            'Q' => Card::Queen,
+            'J' => match part {
+                Part::One => Card::Jack,
+                Part::Two => Card::Joker,
+            },
+            'T' => Card::Ten,
+            '9' => Card::Nine,
+            '8' => Card::Eight,
+            '7' => Card::Seven,
+            '6' => Card::Six,
+            '5' => Card::Five,
+            '4' => Card::Four,
+            '3' => Card::Three,
+            '2' => Card::Two,
+            _ => panic!(),
+        }
     }
 }
 
@@ -87,7 +106,7 @@ pub fn part_one(input: &str) -> Option<u32> {
             let cards: [Card; 5] = cards
                 .chars()
                 .take(5)
-                .map(|c| Card::from_str(&c.to_string()).unwrap())
+                .map(|c| Card::parse_to_card(c, Part::One))
                 .collect::<Vec<Card>>()
                 .try_into()
                 .unwrap();
