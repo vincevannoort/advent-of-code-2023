@@ -84,6 +84,16 @@ impl Strenght {
             return *self;
         }
 
+        // one pair and one joker creates three of a kind
+        if *self == Strenght::OnePair && jokers == 1 {
+            return Strenght::ThreeOfAKind;
+        }
+
+        // three of a kind, but these are all jokers, make four of kind with a different card
+        if *self == Strenght::ThreeOfAKind && jokers == 3 {
+            return Strenght::FourOfAkind;
+        }
+
         // two pairs and one joker get full house
         if *self == Strenght::TwoPairs && jokers == 1 {
             return Strenght::FullHouse;
