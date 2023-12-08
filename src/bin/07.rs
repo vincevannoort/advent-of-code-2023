@@ -51,23 +51,57 @@ impl Hand {
             [a, _, _, _, _] => Strenght::HighCard,
         }
     }
+
+    fn get_strength_with_jokers(&self) -> Strenght {
+        let jokers = self.get_jokers();
+        self.get_strength().increase_strength_by_jokers(jokers)
+    }
+
+    fn get_jokers(&self) -> u32 {
+        self.original_cards
+            .into_iter()
+            .filter(|c| *c == Card::Joker)
+            .count()
+            .try_into()
+            .unwrap()
+    }
 }
 
 impl Strenght {
-    fn increase(&self) -> Self {
-        match *self {
+    fn increase(strength: Strenght) -> Strenght {
+        match strength {
             Strenght::HighCard => Strenght::OnePair,
             Strenght::OnePair => Strenght::TwoPairs,
             Strenght::TwoPairs => Strenght::ThreeOfAKind,
-            Strenght::ThreeOfAKind => Strenght::FullHouse,
-            Strenght::FullHouse => Strenght::FourOfAkind,
+            Strenght::ThreeOfAKind => Strenght::FourOfAkind,
             Strenght::FourOfAkind => Strenght::FiveOfAKind,
+            Strenght::FiveOfAKind => Strenght::FiveOfAKind,
             _ => panic!(),
         }
     }
-    fn increase_strength_by_jokers(&self, jokers: u32) {}
+    fn increase_strength_by_jokers(&self, jokers: u32) -> Strenght {
+        if jokers == 0 {
+            return *self;
+        }
+
+        // two pairs and one joker get full house
+        if *self == Strenght::TwoPairs && jokers == 1 {
+            return Strenght::FullHouse;
+        }
+
+        // full house and two or three jokers get five of a kind
+        if *self == Strenght::FullHouse && (jokers == 2 || jokers == 3) {
+            return Strenght::FiveOfAKind;
+        }
+
+        fn apply_n_times<T>(f: impl Fn(T) -> T, n: u32) -> impl Fn(T) -> T {
+            move |arg| (0..n).fold(arg, |a, _| f(a))
+        }
+        apply_n_times(Strenght::increase, jokers)(*self)
+    }
 }
 
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Hash)]
 enum Part {
     One,
     Two,
@@ -97,8 +131,8 @@ impl Card {
     }
 }
 
-pub fn part_one(input: &str) -> Option<u32> {
-    let total_winnings: u32 = input
+fn get_sorted_cards(input: &str, part: Part) -> Vec<(Hand, u32)> {
+    input
         .lines()
         .map(|line| {
             let (cards, bid) = line.split_once(' ').unwrap();
@@ -106,7 +140,7 @@ pub fn part_one(input: &str) -> Option<u32> {
             let cards: [Card; 5] = cards
                 .chars()
                 .take(5)
-                .map(|c| Card::parse_to_card(c, Part::One))
+                .map(|c| Card::parse_to_card(c, part))
                 .collect::<Vec<Card>>()
                 .try_into()
                 .unwrap();
@@ -138,10 +172,16 @@ pub fn part_one(input: &str) -> Option<u32> {
                 bid,
             )
         })
+        .collect()
+}
+
+pub fn part_one(input: &str) -> Option<u32> {
+    let total_winnings: u32 = get_sorted_cards(input, Part::One)
+        .iter()
         // sort hands by strength
         .sorted_by(|(a_hand, _), (b_hand, _)| {
             let comparison = Ord::cmp(&b_hand.get_strength(), &a_hand.get_strength());
-            if Ord::cmp(&b_hand.get_strength(), &a_hand.get_strength()) == Ordering::Equal {
+            if comparison == Ordering::Equal {
                 // if their strength is the same, compare original hand
                 return Ord::cmp(&b_hand.original_cards, &a_hand.original_cards);
             }
@@ -160,7 +200,47 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let total_winnings: u32 = get_sorted_cards(input, Part::Two)
+        .iter()
+        // sort hands by strength
+        .sorted_by(|(a_hand, _), (b_hand, _)| {
+            let comparison = Ord::cmp(
+                &b_hand.get_strength_with_jokers(),
+                &a_hand.get_strength_with_jokers(),
+            );
+            if comparison == Ordering::Equal {
+                // if their strength is the same, compare original hand
+                return Ord::cmp(&b_hand.original_cards, &a_hand.original_cards);
+            }
+            comparison
+        })
+        // enumerate to get the rank
+        .enumerate()
+        .inspect(|(_, (hand, _))| {
+            // dbg!();
+            // dbg!(rank);
+            let cards = format!(
+                "{:?} {:?} {:?} {:?} {:?}",
+                hand.original_cards[0],
+                hand.original_cards[1],
+                hand.original_cards[2],
+                hand.original_cards[3],
+                hand.original_cards[4]
+            );
+            dbg!();
+            dbg!(cards);
+            dbg!(&hand.get_strength());
+            dbg!(&hand.get_strength_with_jokers());
+            // dbg!(hand.get_strength());
+            // dbg!(hand.get_strength_with_jokers());
+        })
+        .map(|(rank, (_, bid))| {
+            // 0 indexed
+            let rank = rank + 1;
+            rank as u32 * bid
+        })
+        .sum();
+    Some(total_winnings)
 }
 
 advent_of_code::main!(7);
@@ -170,14 +250,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_increasing_by_jokers() {
+        assert_eq!(
+            Strenght::OnePair.increase_strength_by_jokers(2),
+            Strenght::ThreeOfAKind
+        );
+        assert_eq!(
+            Strenght::ThreeOfAKind.increase_strength_by_jokers(1),
+            Strenght::FourOfAkind
+        );
+        assert_eq!(
+            Strenght::OnePair.increase_strength_by_jokers(4),
+            Strenght::FiveOfAKind
+        );
+    }
+
+    #[test]
     fn test_part_one() {
         let result = part_one(&advent_of_code::template::read_file("examples", 7));
-        assert_eq!(result, Some(6440));
+        assert_eq!(result, Some(6592));
     }
 
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", 7));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(6839));
     }
 }
