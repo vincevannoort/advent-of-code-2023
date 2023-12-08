@@ -63,17 +63,15 @@ pub fn part_one(input: &str) -> Option<u32> {
 
     let mut counter = 0;
     let mut current_node = nodes.get("AAA").unwrap();
-    'outer: loop {
-        for direction in &directions {
-            if current_node.name == "ZZZ" {
-                break 'outer;
-            }
-            current_node = match direction {
-                Direction::LEFT => nodes.get(&current_node.left).unwrap(),
-                Direction::RIGHT => nodes.get(&current_node.right).unwrap(),
-            };
-            counter += 1;
+    for direction in directions.iter().cycle() {
+        if current_node.name == "ZZZ" {
+            break;
         }
+        current_node = match direction {
+            Direction::LEFT => nodes.get(&current_node.left).unwrap(),
+            Direction::RIGHT => nodes.get(&current_node.right).unwrap(),
+        };
+        counter += 1;
     }
 
     Some(counter)
@@ -142,7 +140,7 @@ mod tests {
     #[test]
     fn test_part_one() {
         let result: Option<u32> = part_one(&advent_of_code::template::read_file("examples", 8));
-        assert_eq!(result, Some(6));
+        assert_eq!(result, Some(2));
     }
 
     #[test]
