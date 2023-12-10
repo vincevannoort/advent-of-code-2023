@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use num::Integer;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
@@ -76,9 +77,40 @@ pub fn part_one(input: &str) -> Option<u64> {
 pub fn part_two(input: &str) -> Option<u64> {
     let directions: Vec<Direction> = parse_directions(input);
     let nodes: HashMap<String, Node> = parse_nodes(input);
-    dbg!(&directions);
-    dbg!(&nodes);
-    Some(32)
+
+    // find all starting nodes
+    let starting_nodes: HashMap<String, Node> = nodes
+        .clone()
+        .into_iter()
+        .filter(|(name, _)| name.ends_with('A'))
+        .collect();
+
+    // for each node, find the length it takes to reach the end node
+    let mut cycle_lengths = HashMap::<String, usize>::new();
+    for (start_node_name, start_node) in starting_nodes {
+        let mut counter = 0;
+        let mut current_node = start_node;
+        for next_direction in directions.iter().cycle() {
+            if current_node.name.ends_with('Z') {
+                break;
+            }
+            current_node = match next_direction {
+                Direction::Left => nodes.get(&current_node.left).unwrap().clone(),
+                Direction::Right => nodes.get(&current_node.right).unwrap().clone(),
+            };
+            counter += 1;
+        }
+        cycle_lengths.insert(start_node_name, counter);
+    }
+
+    let answer: u64 = cycle_lengths
+        .into_values()
+        .reduce(|acc, e| acc.lcm(&e))
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    Some(answer)
 }
 
 advent_of_code::main!(8);
