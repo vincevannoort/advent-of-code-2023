@@ -58,14 +58,7 @@ pub fn part_two(input: &str) -> Option<i64> {
 
             let last_number = *numbers.last().unwrap();
             let (_, last_numbers) = find_differences(Part::Two, numbers, vec![last_number]);
-            let mut last_numbers = last_numbers;
-            last_numbers.push(0);
-
-            last_numbers
-                .into_iter()
-                .rev()
-                .reduce(|acc, e| e - acc)
-                .unwrap()
+            last_numbers.into_iter().rev().fold(0, |acc, e| e - acc)
         })
         .sum();
 
