@@ -1,9 +1,5 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
-
 use itertools::Itertools;
+use std::collections::HashMap;
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
 struct Node {
@@ -14,15 +10,15 @@ struct Node {
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Hash)]
 enum Direction {
-    LEFT,
-    RIGHT,
+    Left,
+    Right,
 }
 
 impl Direction {
     fn from_char(c: char) -> Direction {
         match c {
-            'L' => Direction::LEFT,
-            'R' => Direction::RIGHT,
+            'L' => Direction::Left,
+            'R' => Direction::Right,
             _ => panic!("unknown direction"),
         }
     }
@@ -57,7 +53,7 @@ fn parse_nodes(input: &str) -> HashMap<String, Node> {
         .collect()
 }
 
-pub fn part_one(input: &str) -> Option<u32> {
+pub fn part_one(input: &str) -> Option<u64> {
     let directions: Vec<Direction> = parse_directions(input);
     let nodes: HashMap<String, Node> = parse_nodes(input);
 
@@ -68,8 +64,8 @@ pub fn part_one(input: &str) -> Option<u32> {
             break;
         }
         current_node = match direction {
-            Direction::LEFT => nodes.get(&current_node.left).unwrap(),
-            Direction::RIGHT => nodes.get(&current_node.right).unwrap(),
+            Direction::Left => nodes.get(&current_node.left).unwrap(),
+            Direction::Right => nodes.get(&current_node.right).unwrap(),
         };
         counter += 1;
     }
@@ -77,58 +73,12 @@ pub fn part_one(input: &str) -> Option<u32> {
     Some(counter)
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
+pub fn part_two(input: &str) -> Option<u64> {
     let directions: Vec<Direction> = parse_directions(input);
     let nodes: HashMap<String, Node> = parse_nodes(input);
-
-    let current_nodes: HashMap<String, Node> = nodes
-        .clone()
-        .into_iter()
-        .filter(|(name, _)| name.ends_with('A'))
-        .collect();
-
-    let current_nodes: Arc<Mutex<HashMap<String, Node>>> = Arc::new(Mutex::new(current_nodes));
-
-    let mut counter = 0;
-    'outer: loop {
-        for direction in &directions {
-            {
-                let all_nodes_at_end: bool = current_nodes
-                    .clone()
-                    .lock()
-                    .unwrap()
-                    .iter()
-                    .all(|(_, node)| node.name.ends_with('Z'));
-
-                if all_nodes_at_end {
-                    break 'outer;
-                }
-            }
-
-            if counter % 100000 == 0 {
-                dbg!(counter);
-            }
-
-            // update all nodes with direction
-            // let mut current_nodes = current_nodes.clone().lock().unwrap();
-            let looping_nodes = { current_nodes.clone().lock().unwrap().clone() };
-            for (start_node, current_node) in looping_nodes {
-                let test = match direction {
-                    Direction::LEFT => nodes.get(&current_node.left).unwrap(),
-                    Direction::RIGHT => nodes.get(&current_node.right).unwrap(),
-                };
-                current_nodes
-                    .clone()
-                    .lock()
-                    .unwrap()
-                    .insert(start_node.clone(), test.clone());
-            }
-
-            counter += 1;
-        }
-    }
-
-    Some(counter)
+    dbg!(&directions);
+    dbg!(&nodes);
+    Some(32)
 }
 
 advent_of_code::main!(8);
@@ -139,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_part_one() {
-        let result: Option<u32> = part_one(&advent_of_code::template::read_file("examples", 8));
+        let result: Option<u64> = part_one(&advent_of_code::template::read_file("examples", 8));
         assert_eq!(result, Some(2));
     }
 
