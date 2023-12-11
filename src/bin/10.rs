@@ -76,7 +76,7 @@ enum Tile {
     NorthWestBend,
     SouthWestBend,
     SouthEastBend,
-    // Ground,
+    Ground,
     AnimalStartingPosition,
 }
 
@@ -112,6 +112,7 @@ impl Tile {
             Tile::SouthWestBend => '7',
             Tile::SouthEastBend => 'F',
             Tile::AnimalStartingPosition => 'S',
+            Tile::Ground => '.',
         }
     }
 
@@ -158,11 +159,16 @@ impl GroundMap {
 
         *animal.0
     }
-    fn draw(&self, loop_tiles: HashMap<Position, Tile>) {
+    fn draw(&self, loop_tiles: HashMap<Position, Tile>, interior_tiles: HashMap<Position, Tile>) {
         for y in 0..self.height {
             for x in 0..self.width {
-                if let Some(a) = loop_tiles.get(&Position { x, y }) {
-                    print!("{}", a.get_char().to_string().red());
+                let position = Position { x, y };
+                if let Some(tile) = loop_tiles.get(&position) {
+                    print!("{}", tile.get_char().to_string().green());
+                } else if let Some(tile) = interior_tiles.get(&position) {
+                    print!("{}", tile.get_char().to_string().red());
+                } else if let Some(tile) = self.tiles.get(&position) {
+                    print!("{}", tile.get_char());
                 } else {
                     print!(".");
                 }
@@ -170,6 +176,39 @@ impl GroundMap {
             println!();
         }
         println!();
+    }
+
+    fn find_loop_tiles(&self) -> HashMap<Position, Tile> {
+        let start_position = self.get_start_position();
+
+        let (mut next_direction, mut next_position) = start_position
+            .get_search_positions()
+            .into_iter()
+            .find(|(direction, position)| {
+                if let Some(tile) = self.tiles.get(position) {
+                    tile.get_out_direction(*direction).is_some()
+                } else {
+                    false
+                }
+            })
+            .unwrap();
+
+        let mut loop_tiles: HashMap<Position, Tile> = HashMap::new();
+
+        loop {
+            let next_tile = self.tiles.get(&next_position).unwrap();
+            loop_tiles.insert(next_position, *next_tile);
+
+            // check, completed loop
+            if next_tile == &Tile::AnimalStartingPosition {
+                break;
+            }
+
+            next_direction = next_tile.get_out_direction(next_direction).unwrap();
+            next_position = next_position.get_next_position(&next_direction);
+        }
+
+        loop_tiles
     }
 }
 
@@ -214,49 +253,49 @@ fn parse_ground_map(s: &str) -> GroundMap {
 }
 
 pub fn part_one(input: &str) -> Option<u64> {
-    // let map: HashMap<(u64, u64), Tile>/
     let ground_map = parse_ground_map(input);
-    let start_position = ground_map.get_start_position();
-    let (mut next_direction, mut next_position) = start_position
-        .get_search_positions()
-        .into_iter()
-        .find(|(direction, position)| {
-            // ground_map.tiles.get(&position)
-            if let Some(tile) = ground_map.tiles.get(position) {
-                tile.get_out_direction(*direction).is_some()
-            } else {
-                false
-            }
-        })
-        .unwrap();
-
-    let mut loop_tiles: HashMap<Position, Tile> = HashMap::new();
-
-    loop {
-        // if loop_tiles.clone().len() % 1000 == 0 {
-        //     ground_map.draw(loop_tiles.clone());
-        // }
-
-        let next_tile = ground_map.tiles.get(&next_position).unwrap();
-        loop_tiles.insert(next_position, *next_tile);
-
-        // check, completed loop
-        if next_tile == &Tile::AnimalStartingPosition {
-            dbg!("loop complete");
-            break;
-        }
-
-        next_direction = next_tile.get_out_direction(next_direction).unwrap();
-        next_position = next_position.get_next_position(&next_direction);
-    }
-
-    let middle: u64 = loop_tiles.len().try_into().unwrap();
-
-    Some(middle)
+    let loop_tiles = ground_map.find_loop_tiles();
+    Some((loop_tiles.len() / 2).try_into().unwrap())
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    None
+    let ground_map = parse_ground_map(input);
+    let loop_tiles = ground_map.find_loop_tiles();
+    let mut interior_tiles: HashMap<Position, Tile> = HashMap::new();
+
+    for y in 0..ground_map.height {
+        let mut crossings = 0;
+
+        for x in 0..ground_map.width {
+            let current_position = Position { x, y };
+
+            if let Some(tile) = loop_tiles.get(&current_position) {
+                // only count up going corners, otherwise we are not aware
+                // L----------J   ->    leaves the loop
+                // L----------7   ->    stays in the loop
+                match tile {
+                    // |
+                    Tile::NorthSouthPipe => crossings += 1,
+                    // L
+                    Tile::NorthEaseBend => crossings += 1,
+                    // J
+                    Tile::NorthWestBend => crossings += 1,
+                    // S (needed sometimes, depending on the start)
+                    // Tile::AnimalStartingPosition => crossings += 1,
+                    _ => {}
+                }
+            } else {
+                // only count uneven crossing, meaning we are inside the polygon
+                if crossings % 2 == 1 {
+                    interior_tiles.insert(current_position, Tile::Ground);
+                }
+            }
+        }
+    }
+
+    // ground_map.draw(loop_tiles.clone(), interior_tiles.clone());
+
+    Some(interior_tiles.len().try_into().unwrap())
 }
 
 advent_of_code::main!(10);
@@ -274,6 +313,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", 10));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(4));
     }
 }
